@@ -41,6 +41,10 @@ dependencies:
   rive: ^0.13.14
   flutter_html: ^3.0.0-beta.2
   flutter_highlight: ^0.7.0
+  flutter_markdown: ^0.7.4
+
+  # Gemini AI
+  google_generative_ai: ^0.4.6
 
   # Networking
   http: ^1.2.2
