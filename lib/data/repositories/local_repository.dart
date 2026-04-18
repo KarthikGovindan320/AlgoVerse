@@ -122,4 +122,52 @@ class LocalRepository {
       return [];
     }
   }
+
+  // ── Concept Graph ─────────────────────────────────────────────────────────
+
+  /// All prerequisite edges: tagId requires requiresTagId.
+  Future<List<Map<String, int>>> getAllEdges() async {
+    try {
+      final dynamic dao = _db.conceptGraphDao;
+      final List rows = await (dao.getAllEdges() as Future);
+      return rows.map<Map<String, int>>((r) {
+        return {'tagId': r.tagId as int, 'requiresTagId': r.requiresTagId as int};
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Problem count per tag for node sizing.
+  Future<Map<int, int>> getProblemCountPerTag() async {
+    try {
+      final dynamic dao = _db.conceptGraphDao;
+      final Map raw = await (dao.getProblemCountPerTag() as Future);
+      return raw.map((k, v) => MapEntry(k as int, v as int));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Prerequisites for a specific tag.
+  Future<List<TagModel>> getPrerequisitesFor(int tagId) async {
+    try {
+      final dynamic dao = _db.conceptGraphDao;
+      final List rows = await (dao.getPrerequisitesFor(tagId) as Future);
+      return rows.map((r) => TagModel.fromDynamic(r)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Dependents (what this tag unlocks).
+  Future<List<TagModel>> getDependentsOf(int tagId) async {
+    try {
+      final dynamic dao = _db.conceptGraphDao;
+      final List rows = await (dao.getDependentsOf(tagId) as Future);
+      return rows.map((r) => TagModel.fromDynamic(r)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 }
