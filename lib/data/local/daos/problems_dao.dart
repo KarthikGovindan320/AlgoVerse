@@ -5,7 +5,7 @@ import '../tables/tags_table.dart';
 
 part 'problems_dao.g.dart';
 
-@DaoAccessor(tables: [Problems, ProblemTags, Tags])
+@DriftAccessor(tables: [Problems, ProblemTags, Tags])
 class ProblemsDao extends DatabaseAccessor<AppDatabase>
     with _$ProblemsDaoMixin {
   ProblemsDao(super.db);
@@ -46,7 +46,11 @@ class ProblemsDao extends DatabaseAccessor<AppDatabase>
     );
 
     final rows = await query.get();
-    return rows.map((row) => Problem.fromData(row.data)).toList();
+    final results = <Problem>[];
+    for (final row in rows) {
+      results.add(await problems.mapFromRow(row));
+    }
+    return results;
   }
 
   /// Search problems by title (case-insensitive LIKE).
@@ -84,6 +88,10 @@ class ProblemsDao extends DatabaseAccessor<AppDatabase>
     );
 
     final rows = await query.get();
-    return rows.map((row) => Problem.fromData(row.data)).toList();
+    final results = <Problem>[];
+    for (final row in rows) {
+      results.add(await problems.mapFromRow(row));
+    }
+    return results;
   }
 }

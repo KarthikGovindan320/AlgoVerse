@@ -4,7 +4,7 @@ import '../tables/tags_table.dart';
 
 part 'tags_dao.g.dart';
 
-@DaoAccessor(tables: [Tags, ProblemTags])
+@DriftAccessor(tables: [Tags, ProblemTags])
 class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   TagsDao(super.db);
 

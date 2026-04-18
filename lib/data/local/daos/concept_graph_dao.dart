@@ -4,7 +4,7 @@ import '../tables/tags_table.dart';
 
 part 'concept_graph_dao.g.dart';
 
-@DaoAccessor(tables: [Tags, ConceptPrerequisites])
+@DriftAccessor(tables: [Tags, ConceptPrerequisites, ProblemTags])
 class ConceptGraphDao extends DatabaseAccessor<AppDatabase>
     with _$ConceptGraphDaoMixin {
   ConceptGraphDao(super.db);
