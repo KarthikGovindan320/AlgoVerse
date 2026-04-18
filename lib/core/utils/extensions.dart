@@ -16,10 +16,10 @@ extension StringX on String {
 extension ColorX on Color {
   Color withBrightness(double factor) {
     return Color.fromARGB(
-      alpha,
-      (red * factor).clamp(0, 255).toInt(),
-      (green * factor).clamp(0, 255).toInt(),
-      (blue * factor).clamp(0, 255).toInt(),
+      (a * 255.0).round() & 0xff,
+      ((r * 255.0).round() & 0xff) * factor ~/ 1,
+      ((g * 255.0).round() & 0xff) * factor ~/ 1,
+      ((b * 255.0).round() & 0xff) * factor ~/ 1,
     );
   }
 }
