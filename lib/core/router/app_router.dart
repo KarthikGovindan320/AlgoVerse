@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/onboarding/splash_screen.dart';
+import '../../features/onboarding/login_screen.dart';
+import '../../features/onboarding/leetcode_screen.dart';
+import '../../features/onboarding/concepts_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/discover/discover_screen.dart';
 import '../../features/concept_graph/concept_graph_screen.dart';
@@ -12,10 +15,11 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/social/social_screen.dart';
 import '../../features/jobs/jobs_screen.dart';
-import '../widgets/loading_spinner.dart';
 import '../theme/app_colors.dart';
+import '../../data/repositories/providers.dart';
 
-// Shell scaffold with bottom nav
+// ── Bottom nav shell ──────────────────────────────────────────────────────────
+
 class MainShell extends StatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
@@ -83,26 +87,95 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
+// ── Auth-aware router notifier ────────────────────────────────────────────────
+
+class _RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  _RouterNotifier(this._ref) {
+    // Rebuild router on auth or profile change
+    _ref.listen(authStateProvider, (_, __) => notifyListeners());
+    _ref.listen(userProfileProvider, (_, __) => notifyListeners());
+  }
+
+  String? redirect(BuildContext context, GoRouterState state) {
+    final authAsync = _ref.read(authStateProvider);
+    final loc = state.matchedLocation;
+
+    // Still resolving auth state — stay put (splash handles the wait)
+    if (authAsync.isLoading) return null;
+
+    final user = authAsync.value;
+
+    // ── Not signed in ────────────────────────────────────────────────────────
+    if (user == null) {
+      // Allow splash and onboarding routes; block everything else
+      if (loc == '/splash' || loc.startsWith('/onboarding')) return null;
+      return '/onboarding/login';
+    }
+
+    // ── Signed in ────────────────────────────────────────────────────────────
+    final profileAsync = _ref.read(userProfileProvider);
+
+    // Profile still loading — allow splash while we wait
+    if (profileAsync.isLoading) {
+      return loc == '/splash' ? null : '/splash';
+    }
+
+    final profile = profileAsync.value;
+    if (profile == null) {
+      // Profile doc doesn't exist yet (first sign-in race) — wait on splash
+      return loc == '/splash' ? null : '/splash';
+    }
+
+    final isComplete = profile['onboardingComplete'] == true;
+
+    if (!isComplete) {
+      // Resume from where the user left off
+      final step = (profile['onboardingStep'] ?? 1) as int;
+      if (loc.startsWith('/onboarding') || loc == '/splash') return null;
+      if (step <= 1) return '/onboarding/leetcode';
+      if (step == 2) return '/onboarding/concepts';
+      return '/onboarding/leetcode';
+    }
+
+    // Fully onboarded — redirect away from auth flow
+    if (loc == '/splash' || loc.startsWith('/onboarding')) return '/home';
+    return null;
+  }
+}
+
+// ── Router provider ───────────────────────────────────────────────────────────
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final notifier = _RouterNotifier(ref);
   return GoRouter(
-    initialLocation: '/onboarding/login',
+    initialLocation: '/splash',
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
     debugLogDiagnostics: false,
     routes: [
-      // Auth / Onboarding stack
+      // ── Splash ─────────────────────────────────────────────────────────────
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+
+      // ── Onboarding ─────────────────────────────────────────────────────────
       GoRoute(
         path: '/onboarding/login',
-        builder: (context, state) => const OnboardingScreen(step: OnboardingStep.login),
+        builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/onboarding/leetcode',
-        builder: (context, state) => const OnboardingScreen(step: OnboardingStep.leetcode),
+        builder: (context, state) => const LeetCodeScreen(),
       ),
       GoRoute(
         path: '/onboarding/concepts',
-        builder: (context, state) => const OnboardingScreen(step: OnboardingStep.concepts),
+        builder: (context, state) => const ConceptsScreen(),
       ),
 
-      // Main shell with bottom nav
+      // ── Main shell with bottom nav ──────────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -133,7 +206,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Top-level screens pushed over main stack
+      // ── Top-level screens ───────────────────────────────────────────────────
       GoRoute(
         path: '/problem/:slug',
         builder: (context, state) => ProblemDetailScreen(
@@ -182,8 +255,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) => Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
-        child: Text('Page not found: ${state.uri}',
-            style: const TextStyle(color: AppColors.textPrimary)),
+        child: Text(
+          'Page not found: ${state.uri}',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
       ),
     ),
   );
