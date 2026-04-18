@@ -1,0 +1,78 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.g.dart
+*.freezed.dart
+
+# Dart
+.dart_tool/
+pubspec.lock
+
+# Android
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/key.properties
+android/**/GeneratedPluginRegistrant.java
+android/app/google-services.json
+
+# iOS
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Runner/GoogleService-Info.plist
+
+# Environment & secrets
+.env
+.env.local
+.env.production
+*.env
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+venv/
+.venv/
+env/
+pipeline/venv/
+
+# Kaggle dataset (large CSV — download manually, do not commit)
+pipeline/data/*.csv
+pipeline/data/*.json
+
+# SQLite — the OUTPUT db is committed to assets, but not intermediate ones
+pipeline/output/*.db
+
+# IDE
+.idea/
+.vscode/settings.json
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# Node (for Cloud Functions)
+functions/node_modules/
+functions/lib/
+
+# Misc
+*.log
+*.tmp
+coverage/
