@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/difficulty_badge.dart';
+import '../../core/widgets/notification_drawer.dart';
 import '../../data/repositories/providers.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -22,7 +23,6 @@ class HomeScreen extends ConsumerWidget {
             // ── Fixed header ──────────────────────────────────────────────
             _HomeHeader(
               profile: profileAsync.value,
-              onNotifications: () {}, // Phase 9
               onProfile: () => context.push('/profile'),
             ),
 
@@ -79,12 +79,10 @@ class HomeScreen extends ConsumerWidget {
 
 class _HomeHeader extends StatelessWidget {
   final Map<String, dynamic>? profile;
-  final VoidCallback onNotifications;
   final VoidCallback onProfile;
 
   const _HomeHeader({
     required this.profile,
-    required this.onNotifications,
     required this.onProfile,
   });
 
@@ -107,12 +105,8 @@ class _HomeHeader extends StatelessWidget {
               style: AppTextStyles.sectionHeader,
             ),
           ),
-          // Notification bell
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined,
-                color: AppColors.textSecondary),
-            onPressed: onNotifications,
-          ),
+          // Notification bell with badge
+          const NotificationBell(),
           // Avatar
           GestureDetector(
             onTap: onProfile,
