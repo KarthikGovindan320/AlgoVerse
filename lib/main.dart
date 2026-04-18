@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
+import 'services/sound_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,9 @@ void main() async {
 
   // Initialize notification service
   await NotificationService().init();
+
+  // Initialize sound service
+  await SoundService().init();
 
   // Lock to portrait mode
   await SystemChrome.setPreferredOrientations([
