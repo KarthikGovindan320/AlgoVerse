@@ -14,6 +14,7 @@ Usage (with venv activated):
 import sqlite3
 import json
 import os
+import re
 import sys
 import time
 import argparse
