@@ -1,0 +1,35 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "leaderboard_global",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "xp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "duels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participantIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learning_cards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "profile",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "streak", "order": "DESCENDING" },
+        { "fieldPath": "lastActiveDate", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
@@ -11,6 +12,10 @@ import 'services/sound_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Increment launch counter (used for Day-2 notification permission request).
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('launch_count', (prefs.getInt('launch_count') ?? 0) + 1);
 
   // Load environment variables
   await dotenv.load(fileName: '.env');

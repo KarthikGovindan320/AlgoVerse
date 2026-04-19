@@ -97,12 +97,9 @@ final radarScoresProvider =
 
 // ── Daily Problem ─────────────────────────────────────────────────────────────
 
+/// Watches the global daily problem written by the generateDailyProblem
+/// Cloud Function at config/daily_problem.
 final dailyProblemProvider =
-    StreamProvider<Map<String, dynamic>?>((ref) async* {
-  final authState = await ref.watch(authStateProvider.future);
-  if (authState == null) {
-    yield null;
-    return;
-  }
-  yield* ref.watch(firestoreServiceProvider).watchDailyProblem(authState.uid);
+    StreamProvider<Map<String, dynamic>?>((ref) {
+  return ref.watch(firestoreServiceProvider).watchDailyProblem();
 });

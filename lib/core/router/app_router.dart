@@ -18,6 +18,10 @@ import '../../features/jobs/jobs_screen.dart';
 import '../theme/app_colors.dart';
 import '../../data/repositories/providers.dart';
 
+/// Root navigator key exposed globally so NotificationService can obtain
+/// a BuildContext for foreground banners and navigation.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 // ── Bottom nav shell ──────────────────────────────────────────────────────────
 
 class MainShell extends StatefulWidget {
@@ -150,6 +154,7 @@ class _RouterNotifier extends ChangeNotifier {
 final appRouterProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterNotifier(ref);
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: notifier.redirect,

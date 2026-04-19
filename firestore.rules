@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // ── Global config (read-only for all signed-in users) ────────────────────
+
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── User data — private to the owner ─────────────────────────────────────
+
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── Leaderboard — readable by all signed-in users ─────────────────────────
+
+    match /leaderboard_global/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); // Cloud Function writes via Admin SDK (bypasses rules)
+    }
+
+    // ── Duels — participants can read/write their own duel ────────────────────
+
+    match /duels/{duelId} {
+      allow read: if isSignedIn() &&
+        request.auth.uid in resource.data.participantIds;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() &&
+        request.auth.uid in resource.data.participantIds;
+    }
+
+    // ── Learning cards — readable by all, liked by signed-in users ───────────
+
+    match /learning_cards/{cardId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Jobs — readable by all signed-in users ────────────────────────────────
+
+    match /jobs/{jobId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Problems mirror (populated by pipeline for Cloud Functions) ───────────
+
+    match /problems/{problemId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

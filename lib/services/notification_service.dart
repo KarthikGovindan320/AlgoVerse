@@ -52,8 +52,16 @@ class NotificationService {
         AuthorizationStatus.authorized;
     if (granted) {
       await _storeCurrentToken();
+      await _subscribeToTopics();
     }
     return granted;
+  }
+
+  Future<void> _subscribeToTopics() async {
+    // Subscribe to broadcast topics used by Cloud Functions.
+    await _messaging.subscribeToTopic('daily_problem');
+    await _messaging.subscribeToTopic('streak_alerts');
+    await _messaging.subscribeToTopic('platform_updates');
   }
 
   /// Store FCM token without requesting permission (call if already granted).

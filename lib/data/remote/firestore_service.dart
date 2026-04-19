@@ -171,11 +171,20 @@ class FirestoreService {
 
   // ── Daily Problem ─────────────────────────────────────────────────────────
 
-  DocumentReference _dailyProblemRef(String uid) =>
+  /// Global daily problem written by the Cloud Function.
+  /// Path: config/daily_problem
+  DocumentReference get _globalDailyProblemRef =>
+      _db.collection('config').doc('daily_problem');
+
+  Stream<Map<String, dynamic>?> watchDailyProblem() =>
+      _globalDailyProblemRef.snapshots().map((s) => s.data() as Map<String, dynamic>?);
+
+  // Keep old per-user ref for backwards compat / future personalisation.
+  DocumentReference _userDailyProblemRef(String uid) =>
       _db.collection('users').doc(uid).collection('daily_problem').doc('today');
 
-  Stream<Map<String, dynamic>?> watchDailyProblem(String uid) =>
-      _dailyProblemRef(uid)
+  Stream<Map<String, dynamic>?> watchUserDailyProblem(String uid) =>
+      _userDailyProblemRef(uid)
           .snapshots()
           .map((s) => s.data() as Map<String, dynamic>?);
 
