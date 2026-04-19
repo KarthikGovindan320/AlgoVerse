@@ -32,6 +32,10 @@ COLUMN_MAP = {
     # Title
     "title": "title",
     "question title": "title",
+    # Problem URL — slug is extracted from this when no slug column exists
+    "link": "link",
+    "url": "link",
+    "problemurl": "link",
     # Difficulty
     "difficulty": "difficulty",
     # Statement / description
@@ -40,27 +44,32 @@ COLUMN_MAP = {
     "body": "statement",
     "question": "statement",
     "questionbody": "statement",
-    # Acceptance rate
+    # Acceptance rate (handles "Acceptance Rate (%)" variant)
     "acrate": "acceptance_rate",
     "acceptance_rate": "acceptance_rate",
     "acceptancerate": "acceptance_rate",
     "acceptance rate": "acceptance_rate",
-    # Premium
+    "acceptance rate (%)": "acceptance_rate",
+    # Premium (handles "Premium Only" variant)
     "ispaidonly": "is_premium",
     "is_premium": "is_premium",
     "paidonly": "is_premium",
     "paid only": "is_premium",
-    # LeetCode's own tags
+    "premium only": "is_premium",
+    "premium": "is_premium",
+    # LeetCode's own tags (handles "Topics" variant)
     "topictags": "lc_tags",
     "topic_tags": "lc_tags",
     "topic tags": "lc_tags",
     "tags": "lc_tags",
+    "topics": "lc_tags",
     # Hints
     "hints": "hints",
-    # Example test cases
+    # Example test cases (handles "Example Test Cases" variant)
     "sampletestcase": "example_testcases",
     "exampletestcases": "example_testcases",
     "example testcases": "example_testcases",
+    "example test cases": "example_testcases",
     # Likes
     "likes": "likes",
     # Similar questions
@@ -164,6 +173,32 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _derive_slug_from_url(url: str) -> str:
+    """Extract slug from a LeetCode problem URL.
+
+    Handles formats like:
+      https://leetcode.com/problems/two-sum/description/
+      https://leetcode.com/problems/two-sum/
+      https://leetcode.com/problems/two-sum
+    """
+    m = re.search(r"leetcode\.com/problems/([^/?#]+)", str(url))
+    return m.group(1).strip("/") if m else ""
+
+
+def _slug_from_title(title: str) -> str:
+    """Generate a LeetCode-style slug from a problem title.
+
+    'Two Sum'  →  'two-sum'
+    'N-th Tribonacci Number'  →  'n-th-tribonacci-number'
+    """
+    s = str(title).lower().strip()
+    # Replace any non-alphanumeric char (except hyphens) with a hyphen
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    # Collapse consecutive hyphens and strip leading/trailing ones
+    s = re.sub(r"-+", "-", s).strip("-")
+    return s
+
+
 def _parse_bool(val) -> int:
     if isinstance(val, bool):
         return int(val)
@@ -211,6 +246,19 @@ def run():
 
     df = _normalize_columns(df)
 
+    # ── Derive slug if the CSV has no dedicated slug column ───────────────────
+    if "slug" not in df.columns:
+        if "link" in df.columns:
+            print("[INFO] No 'slug' column — deriving from 'link' (URL) column.")
+            df["slug"] = df["link"].apply(_derive_slug_from_url)
+            # Fall back to title-based slug for rows where URL parsing failed
+            mask = df["slug"] == ""
+            if mask.any():
+                df.loc[mask, "slug"] = df.loc[mask, "title"].apply(_slug_from_title)
+        elif "title" in df.columns:
+            print("[INFO] No 'slug' column — generating from 'title' column.")
+            df["slug"] = df["title"].apply(_slug_from_title)
+
     # Ensure required columns exist
     for col in ("id", "slug", "title", "difficulty"):
         if col not in df.columns:
@@ -243,7 +291,9 @@ def run():
             is_premium = _parse_bool(row.get("is_premium", False))
             raw_statement = row.get("statement", "")
             statement = _clean_statement(raw_statement) if raw_statement else ""
-            tagging_skipped = 1 if (not statement or is_premium) else 0
+            # Only skip premium problems — problems without a statement can still
+            # be tagged by the tagger using lc_tags (Topics) + title + difficulty.
+            tagging_skipped = 1 if is_premium else 0
 
             acceptance_rate_raw = row.get("acceptance_rate", None)
             acceptance_rate = None

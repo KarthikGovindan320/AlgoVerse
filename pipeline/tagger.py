@@ -26,7 +26,7 @@ load_dotenv()
 
 DB_PATH = os.path.join("output", "leetcode_problems.db")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.5-flash"
 
 # Rate limiting: 55 requests/minute max
 REQUESTS_PER_MINUTE = 55
@@ -48,7 +48,7 @@ Prerequisites should be concepts the user MUST understand first — be logical a
 
 USER_PROMPT_TEMPLATE = """Problem Title: {title}
 Difficulty: {difficulty}
-LeetCode's own tags (shallow hints): {lc_tags}
+LeetCode's own tags (use these as primary signal when no statement is available): {lc_tags}
 
 Problem Statement:
 {statement}
@@ -137,13 +137,17 @@ def _parse_gemini_json(raw: str) -> Optional[dict]:
 
 
 def _get_untagged_problems(conn: sqlite3.Connection, limit: Optional[int] = None):
-    """Fetch problems that haven't been tagged yet."""
+    """Fetch problems that haven't been tagged yet.
+
+    Works with or without a problem statement — the tagger falls back to
+    lc_tags (Topics) + title + difficulty when no statement is available.
+    """
     query = """
-        SELECT p.id, p.title, p.difficulty, p.statement, p.lc_tags
+        SELECT p.id, p.title, p.difficulty,
+               COALESCE(p.statement, '') AS statement,
+               COALESCE(p.lc_tags, '[]') AS lc_tags
         FROM problems p
         WHERE p.tagging_skipped = 0
-          AND p.statement IS NOT NULL
-          AND p.statement != ''
           AND p.id NOT IN (
               SELECT DISTINCT problem_id FROM problem_tags
           )
@@ -227,11 +231,12 @@ async def _call_gemini(session_semaphore: asyncio.Semaphore,
     except Exception:
         lc_tags_str = str(lc_tags_raw or "none")
 
+    statement_text = statement[:4000] if statement.strip() else "(No statement available — infer from title, difficulty, and LeetCode tags above.)"
     prompt = USER_PROMPT_TEMPLATE.format(
         title=title,
         difficulty=difficulty,
         lc_tags=lc_tags_str,
-        statement=statement[:4000],  # truncate very long statements
+        statement=statement_text,
     )
 
     backoff = 2.0
@@ -253,7 +258,7 @@ async def _call_gemini(session_semaphore: asyncio.Semaphore,
                 response = await asyncio.to_thread(
                     model.generate_content,
                     prompt,
-                    generation_config={"temperature": 0.3, "max_output_tokens": 1000},
+                    generation_config={"temperature": 0.3, "max_output_tokens": 2048},
                 )
                 raw_text = response.text
                 parsed = _parse_gemini_json(raw_text)
@@ -348,11 +353,12 @@ def run(test_n: Optional[int] = None):
             except Exception:
                 lc_tags_str = str(lc_tags_raw or "none")
 
+            statement_text = statement[:4000] if statement.strip() else "(No statement available — infer from title, difficulty, and LeetCode tags above.)"
             prompt = USER_PROMPT_TEMPLATE.format(
                 title=title,
                 difficulty=difficulty,
                 lc_tags=lc_tags_str,
-                statement=statement[:4000],
+                statement=statement_text,
             )
 
             model = genai.GenerativeModel(
@@ -361,19 +367,19 @@ def run(test_n: Optional[int] = None):
             )
             response = model.generate_content(
                 prompt,
-                generation_config={"temperature": 0.3, "max_output_tokens": 1000},
+                generation_config={"temperature": 0.3, "max_output_tokens": 2048},
             )
             raw = response.text
             print("Raw Gemini response:")
-            print(raw)
+            print(raw.encode("ascii", "replace").decode("ascii"))
             print()
 
             parsed = _parse_gemini_json(raw)
             if parsed:
                 _write_tags(conn, problem_id, parsed)
-                print(f"  ✓ Tags written for problem {problem_id}")
+                print(f"  [OK] Tags written for problem {problem_id}")
             else:
-                print(f"  ✗ Failed to parse JSON for problem {problem_id}")
+                print(f"  [FAIL] Failed to parse JSON for problem {problem_id}")
 
             time.sleep(DELAY_BETWEEN_REQUESTS)
 
