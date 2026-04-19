@@ -27,7 +27,7 @@ load_dotenv()
 
 DB_PATH = os.path.join("output", "leetcode_problems.db")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-2.5-flash-lite"
 
 # Rate limiting: 55 requests/minute max
 REQUESTS_PER_MINUTE = 55
