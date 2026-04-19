@@ -116,23 +116,61 @@ def _get_category(concept_name: str) -> str:
 
 
 def _parse_gemini_json(raw: str) -> Optional[dict]:
-    """Extract JSON from Gemini response, handling markdown code fences."""
+    """Extract JSON from Gemini response.
+
+    Handles:
+    - Markdown code fences (```json ... ```)
+    - Gemini 2.5 thinking tokens (<thinking>...</thinking>)
+    - Extra text before/after the JSON object
+    - Greedy brace matching to find the outermost JSON object
+    """
     raw = raw.strip()
-    # Strip ```json ... ``` wrapper
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    # Strip thinking tokens emitted by Gemini 2.5
+    raw = re.sub(r"<thinking>[\s\S]*?</thinking>", "", raw, flags=re.IGNORECASE).strip()
+
+    # Strip ```json ... ``` or ``` ... ``` wrappers
+    fence_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", raw)
+    if fence_match:
+        raw = fence_match.group(1).strip()
+
+    # Try parsing directly first
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        # Try to find JSON object in the response
-        import re
-        match = re.search(r"\{[\s\S]+\}", raw)
-        if match:
-            try:
-                return json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
+        pass
+
+    # Find the outermost JSON object by matching braces
+    start = raw.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+    for i, ch in enumerate(raw[start:], start):
+        if escape:
+            escape = False
+            continue
+        if ch == "\\" and in_string:
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                candidate = raw[start:i + 1]
+                try:
+                    return json.loads(candidate)
+                except json.JSONDecodeError:
+                    break
+
     return None
 
 
@@ -391,10 +429,10 @@ def run(test_n: Optional[int] = None):
         for batch_start in range(0, total, CHECKPOINT_EVERY):
             batch = problems[batch_start: batch_start + CHECKPOINT_EVERY]
             print(f"\n[Batch {batch_start // CHECKPOINT_EVERY + 1}] "
-                  f"Problems {batch_start + 1}–{batch_start + len(batch)}")
+                  f"Problems {batch_start + 1}-{batch_start + len(batch)}")
             success = asyncio.run(_run_batch(batch, conn))
             total_success += success
-            print(f"  → {success}/{len(batch)} tagged successfully")
+            print(f"  >> {success}/{len(batch)} tagged successfully")
 
         print(f"\n[DONE] {total_success}/{total} problems tagged.")
 
